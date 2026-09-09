@@ -6,13 +6,13 @@ on a fresh Ubuntu VPS with one command — the same stack as `mc.nnetwork998.ir`
 ## One-link install
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/niakanniakan32-max/panel-installer/main/install.sh)
+bash <(curl -sL https://raw.githubusercontent.com/niakanniakan32-max/Panel-installation-mc/main/install.sh)
 ```
 
-> Replace `niakanniakan32-max/panel-installer` with your repo path after uploading these files,
+> Replace `niakanniakan32-max/Panel-installation-mc` with your repo path after uploading these files,
 > keeping the same layout (`install.sh`, `lib/`, `modules/`, `files/`).
 > Also replace the `REPO_RAW` default inside `install.sh`, or export it:
-> `REPO_RAW=https://raw.githubusercontent.com/niakanniakan32-max/panel-installer/main bash <(...)`.
+> `REPO_RAW=https://raw.githubusercontent.com/niakanniakan32-max/Panel-installation-mc/main bash <(...)`.
 
 ## Requirements (new VPS)
 
@@ -26,7 +26,7 @@ bash <(curl -sL https://raw.githubusercontent.com/niakanniakan32-max/panel-insta
 ## Unattended install
 
 ```bash
-curl -sL https://raw.githubusercontent.com/niakanniakan32-max/panel-installer/main/install.sh -o install.sh
+curl -sL https://raw.githubusercontent.com/niakanniakan32-max/Panel-installation-mc/main/install.sh -o install.sh
 DOMAIN=panel.example.com EMAIL=admin@example.com \
 ADMIN_USER=admin ADMIN_PASS='pick-something-strong' \
 bash install.sh --non-interactive

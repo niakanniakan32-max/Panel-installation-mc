@@ -2,7 +2,7 @@
 #
 # One-link panel installer (Jexpanel/Everest + Wings + modpack browser)
 # Usage:
-#   bash <(curl -sL https://raw.githubusercontent.com/niakanniakan32-max/panel-installer/main/install.sh)
+#   bash <(curl -sL https://raw.githubusercontent.com/niakanniakan32-max/Panel-installation-mc/main/install.sh)
 #
 # Optional env vars for unattended installs (all have interactive prompts otherwise):
 #   DOMAIN EMAIL ADMIN_USER ADMIN_PASS TIMEZONE HTTP_PORT HTTPS_PORT WINGS_PORT SFTP_PORT
@@ -11,7 +11,7 @@
 #
 set -euo pipefail
 
-REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/niakanniakan32-max/panel-installer/main}"
+REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/niakanniakan32-max/Panel-installation-mc/main}"
 JEXPANEL_VERSION="${JEXPANEL_VERSION:-v4.0.7}"
 PANEL_DIR="/var/www/jexpanel"
 LOG="/var/log/panel-install.log"
