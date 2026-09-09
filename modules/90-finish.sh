@@ -15,7 +15,14 @@ for s in nginx php8.5-fpm redis-server mariadb docker wings; do
 done
 
 log "Verifying panel responds..."
-CODE="$(curl -sk -o /dev/null -w "%{http_code}" --max-time 30 "$PANEL_URL/")"
+CODE="$(curl -sk -o /dev/null -w "%{http_code}" --max-time 30 "$PANEL_URL/" || true)"
+if [ "$CODE" != "200" ]; then
+  # DNS may not be ready on very fresh boxes - retry against localhost.
+  PORT_OF_URL="$(echo "$PANEL_URL" | grep -oE ':[0-9]+' | tr -d ':' || true)"
+  [ -n "$PORT_OF_URL" ] || PORT_OF_URL=443
+  CODE="$(curl -sk -o /dev/null -w "%{http_code}" --max-time 30 \
+    --resolve "$DOMAIN:$PORT_OF_URL:127.0.0.1" "$PANEL_URL/" || true)"
+fi
 [ "$CODE" = "200" ] || die "Panel at $PANEL_URL returned HTTP $CODE."
 
 log "Verifying wings ports..."

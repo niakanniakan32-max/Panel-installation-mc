@@ -21,5 +21,8 @@ fi
 if [ -d "$PANEL_DIR" ]; then
   die "$PANEL_DIR already exists. Remove it or use another machine (fresh VPS required)."
 fi
+if [ -f /etc/pterodactyl/config.yml ] || systemctl is-active wings >/dev/null 2>&1; then
+  die "An existing wings install was detected (/etc/pterodactyl/config.yml or running wings service). This installer needs a fresh VPS - uninstall wings first."
+fi
 command -v curl >/dev/null || { apt-get update -y && apt-get install -y curl ca-certificates; }
 log "Preflight OK."

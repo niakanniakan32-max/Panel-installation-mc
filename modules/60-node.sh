@@ -71,9 +71,22 @@ sed -i -e "s/__NODE_NAME__/$NODE_NAME/" -e "s/__DOMAIN__/$DOMAIN/g" \
   "$TMPDIR_WORK/makenode.php"
 
 cd "$PANEL_DIR"
-sudo -u www-data php artisan tinker --execute="$(cat "$TMPDIR_WORK/makenode.php")" > "$TMPDIR_WORK/node.out" 2>&1
-tail -6 "$TMPDIR_WORK/node.out" | tee -a "$LOG"
-grep -q "^NODE_UUID=" "$TMPDIR_WORK/node.out" || die "Node creation failed (see $LOG)."
+echo "Running node-creation tinker..." | tee -a "$LOG"
+TRIES=0
+TINKER_RC=1
+while [ "$TRIES" -lt 3 ]; do
+  TRIES=$((TRIES + 1))
+  if sudo -u www-data php artisan tinker --execute="$(cat "$TMPDIR_WORK/makenode.php")" > "$TMPDIR_WORK/node.out" 2>&1; then
+    TINKER_RC=0
+    break
+  fi
+  warn "node-creation tinker attempt $TRIES failed, retrying..."
+  sleep 5
+done
+echo "tinker exit: $TINKER_RC (after $TRIES attempt(s))" | tee -a "$LOG"
+echo "--- node creation output ---" | tee -a "$LOG"
+tail -8 "$TMPDIR_WORK/node.out" | tee -a "$LOG"
+grep -q "^NODE_UUID=" "$TMPDIR_WORK/node.out" || die "Node creation failed (see $TMPDIR_WORK/node.out)."
 
 # shellcheck disable=SC1091
 source <(grep -E "^(NODE_|ALLOCATIONS=)" "$TMPDIR_WORK/node.out")
@@ -107,6 +120,14 @@ chmod 600 /etc/pterodactyl/config.yml
 
 log "Starting wings..."
 systemctl start wings
-sleep 5
-systemctl is-active wings || die "Wings failed to start (journalctl -u wings)."
+log "Waiting for wings to become active (up to 90s)..."
+READY=0
+for i in $(seq 1 18); do
+  if systemctl is-active wings >/dev/null 2>&1; then
+    READY=1
+    break
+  fi
+  sleep 5
+done
+[ "$READY" = "1" ] || die "Wings failed to start (journalctl -u wings)."
 log "Node ready: $NODE_NAME ($NODE_UUID), $ALLOCATIONS allocations."

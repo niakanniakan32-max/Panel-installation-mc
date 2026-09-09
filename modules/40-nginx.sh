@@ -14,31 +14,20 @@ fi
 mkdir -p /var/www/html
 chown www-data:www-data /var/www/html
 
-# Extra plain-HTTP redirect block if the user picked a non-80 HTTP port.
-EXTRA_HTTP=""
-if [ "$HTTP_PORT" != "80" ]; then
-  if port_in_use "$HTTP_PORT"; then
-    die "Port $HTTP_PORT is already in use on this machine. Pick a free one."
-  fi
-  EXTRA_HTTP="
-server {
-    listen $HTTP_PORT;
-    listen [::]:$HTTP_PORT;
-    server_name $DOMAIN;
-    return 301 ${HTTPS_URL}\$request_uri;
-}
-"
+# The custom HTTP port gets its server block only AFTER we know whether
+# SSL exists: redirect-to-HTTPS with SSL, panel-itself without.
+if [ "$HTTP_PORT" != "80" ] && port_in_use "$HTTP_PORT"; then
+  die "Port $HTTP_PORT is already in use on this machine. Pick a free one."
 fi
 
 if port_in_use 80; then
   warn "Port 80 is already in use. Let's Encrypt http-01 checks need port 80 free - SSL issuance will likely fail (panel will still work over plain HTTP)."
 fi
 
-log "Writing nginx vhost (port 80 + $HTTP_PORT -> $HTTPS_URL)..."
+log "Writing nginx vhost (port 80 ACME + redirect)..."
 fetch "files/nginx-http.conf" "$TMPDIR_WORK/nginx-http.conf"
 sed -e "s|{{DOMAIN}}|$DOMAIN|g" -e "s|{{HTTPS_URL}}|$HTTPS_URL|g" \
   "$TMPDIR_WORK/nginx-http.conf" > /etc/nginx/sites-available/panel.conf
-printf '%s\n' "$EXTRA_HTTP" >> /etc/nginx/sites-available/panel.conf
 
 # Avoid clashing with Ubuntu's default site on port 80.
 if [ -e /etc/nginx/sites-enabled/default ]; then
@@ -48,7 +37,7 @@ fi
 ln -sf /etc/nginx/sites-available/panel.conf /etc/nginx/sites-enabled/panel.conf
 chown -R www-data:www-data "$PANEL_DIR"
 nginx -t
-systemctl reload nginx
+systemctl reload-or-restart nginx
 
 log "Requesting Let's Encrypt certificate for $DOMAIN..."
 if certbot certonly --webroot -w /var/www/html -d "$DOMAIN" \
@@ -63,13 +52,35 @@ if [ "$HAVE_SSL" = "1" ]; then
   if port_in_use "$HTTPS_PORT"; then
     die "Port $HTTPS_PORT became used meanwhile. Free it and re-run."
   fi
+  if [ "$HTTP_PORT" != "80" ]; then
+    log "Adding HTTP redirect on $HTTP_PORT..."
+    cat >> /etc/nginx/sites-available/panel.conf <<REDIRECT
+
+server {
+    listen $HTTP_PORT;
+    listen [::]:$HTTP_PORT;
+    server_name $DOMAIN;
+    return 301 ${HTTPS_URL}\$request_uri;
+}
+REDIRECT
+  fi
   log "Enabling HTTPS on $HTTPS_PORT..."
   fetch "files/nginx-ssl.conf" "$TMPDIR_WORK/nginx-ssl.conf"
   sed -e "s|{{DOMAIN}}|$DOMAIN|g" -e "s|{{HTTPS_PORT}}|$HTTPS_PORT|g" -e "s|{{PANEL_DIR}}|$PANEL_DIR|g" \
     "$TMPDIR_WORK/nginx-ssl.conf" > /etc/nginx/sites-available/panel-ssl.conf
   ln -sf /etc/nginx/sites-available/panel-ssl.conf /etc/nginx/sites-enabled/panel-ssl.conf
   nginx -t
-  systemctl reload nginx
+  systemctl reload-or-restart nginx
+else
+  # No certificate: the HTTP port must SERVE the panel (redirecting would
+  # loop to an https:// URL with no listener and break wings + logins).
+  log "No SSL - serving panel over plain HTTP on $HTTP_PORT..."
+  fetch "files/nginx-plain.conf" "$TMPDIR_WORK/nginx-plain.conf"
+  sed -e "s|{{DOMAIN}}|$DOMAIN|g" -e "s|{{HTTP_PORT}}|$HTTP_PORT|g" -e "s|{{PANEL_DIR}}|$PANEL_DIR|g" \
+    "$TMPDIR_WORK/nginx-plain.conf" > /etc/nginx/sites-available/panel-plain.conf
+  ln -sf /etc/nginx/sites-available/panel-plain.conf /etc/nginx/sites-enabled/panel-plain.conf
+  nginx -t
+  systemctl reload-or-restart nginx
 fi
 
 # Persist for the summary.

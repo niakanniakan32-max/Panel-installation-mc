@@ -10,7 +10,7 @@ apt-get update -y
 
 log "Installing base packages..."
 apt-get install -y ca-certificates curl wget git unzip tar cron gnupg lsb-release \
-  software-properties-common apt-transport-https dnsutils python3
+  software-properties-common apt-transport-https dnsutils python3 sudo
 
 # PHP 8.5 (Jexpanel needs ^8.4 || ^8.5)
 if ! command -v php >/dev/null || ! php -v | head -1 | grep -q "8\.[45]"; then
@@ -24,8 +24,8 @@ apt-get install -y php8.5 php8.5-cli php8.5-common php8.5-fpm php8.5-mysql php8.
 
 log "Installing MariaDB, nginx, Redis..."
 apt-get install -y mariadb-server nginx redis-server
-systemctl enable --now mariadb redis-server
-systemctl enable nginx
+systemctl enable --now mariadb redis-server php8.5-fpm
+systemctl enable --now nginx
 
 # Composer
 if ! command -v composer >/dev/null; then

@@ -14,7 +14,7 @@ else
     arm64) WINGS_ARCH="arm64" ;;
     *) die "Unsupported architecture for Wings: $ARCH" ;;
   esac
-  curl -fsSL -o /usr/local/bin/wings \
+  curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --max-time 300 -o /usr/local/bin/wings \
     "https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_$WINGS_ARCH"
   chmod u+x /usr/local/bin/wings
 fi

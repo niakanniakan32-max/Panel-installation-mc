@@ -4,13 +4,16 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
 log "Copying modpack controllers + views + picker..."
+mkdir -p \
+  "$PANEL_DIR/app/Http/Controllers/Api/Client/Modpacks" \
+  "$PANEL_DIR/resources/views/browse" \
+  "$PANEL_DIR/resources/scripts/components/admin/management/servers/modpack"
 fetch "files/app/Http/Controllers/Api/Client/Modpacks/CurseforgeController.php" \
   "$PANEL_DIR/app/Http/Controllers/Api/Client/Modpacks/CurseforgeController.php"
 fetch "files/app/Http/Controllers/Api/Client/Modpacks/FtbController.php" \
   "$PANEL_DIR/app/Http/Controllers/Api/Client/Modpacks/FtbController.php"
 fetch "files/app/Http/Controllers/Api/Client/Modpacks/UploadController.php" \
   "$PANEL_DIR/app/Http/Controllers/Api/Client/Modpacks/UploadController.php"
-mkdir -p "$PANEL_DIR/resources/views/browse"
 fetch "files/resources/views/browse/index.blade.php" \
   "$PANEL_DIR/resources/views/browse/index.blade.php"
 fetch "files/resources/scripts/components/admin/management/servers/modpack/ModpackPicker.tsx" \
@@ -74,7 +77,10 @@ sudo -u www-data python3 "$TMPDIR_WORK/build-ftb-cache.py" "$PANEL_DIR" 2>&1 | t
 
 log "Building panel frontend (npm install + build, several minutes)..."
 cd "$PANEL_DIR"
-sudo -u www-data npm install --no-audit --no-fund 2>&1 | tail -2 | tee -a "$LOG"
+# npm (as www-data) needs a writable cache dir.
+mkdir -p /var/www/.npm
+chown www-data:www-data /var/www/.npm
+sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps 2>&1 | tail -2 | tee -a "$LOG"
 sudo -u www-data npm run build 2>&1 | tail -3 | tee -a "$LOG"
 chown -R www-data:www-data "$PANEL_DIR/public/build" "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 

@@ -52,7 +52,7 @@ if [ "$DRY_RUN" = "1" ]; then
   exit 0
 fi
 
-export REPO_RAW JEXPANEL_VERSION PANEL_DIR LOG NON_INTERACTIVE
+export REPO_RAW JEXPANEL_VERSION PANEL_DIR LOG NON_INTERACTIVE TMPDIR_WORK
 export DOMAIN="${DOMAIN:-}" EMAIL="${EMAIL:-}" ADMIN_USER="${ADMIN_USER:-}"
 export ADMIN_PASS="${ADMIN_PASS:-}" TIMEZONE="${TIMEZONE:-}"
 export HTTP_PORT="${HTTP_PORT:-}" HTTPS_PORT="${HTTPS_PORT:-}"
@@ -62,8 +62,16 @@ export PORT_START="${PORT_START:-}" PORT_COUNT="${PORT_COUNT:-}"
 
 TMPDIR_WORK="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR_WORK"' EXIT
+# tinker/sudo steps run as www-data and must read files from the workdir.
+chmod 755 "$TMPDIR_WORK"
 
-fetch() { # fetch <remote-path> <local-path>
+# Bootstrap: minimal images (docker ubuntu, fresh VPS templates) may lack curl.
+if ! command -v curl >/dev/null 2>&1; then
+  echo "* Installing curl for bootstrap..."
+  apt-get update -y && apt-get install -y curl ca-certificates
+fi
+
+fetch() { # (also defined in lib/common.sh for modules)
   curl -fsSL "$REPO_RAW/$1" -o "$2"
 }
 

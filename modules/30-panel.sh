@@ -9,16 +9,20 @@ DB_PASS="$(gen_pass 24)"
 
 log "Downloading Jexpanel $JEXPANEL_VERSION..."
 mkdir -p "$PANEL_DIR"
-curl -fsSL -o "$TMPDIR_WORK/panel.tar.gz" \
+curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --max-time 600 -o "$TMPDIR_WORK/panel.tar.gz" \
   "https://github.com/Jexactyl/Jexactyl/releases/download/$JEXPANEL_VERSION/panel.tar.gz"
 tar -xzf "$TMPDIR_WORK/panel.tar.gz" -C "$PANEL_DIR"
 chown -R www-data:www-data "$PANEL_DIR"
 
 log "Creating database..."
+# NOTE: both host forms are needed - some MariaDB builds reverse-resolve
+# 127.0.0.1 to "localhost" and then only match user@'localhost'.
 mariadb -uroot <<SQL
 CREATE DATABASE IF NOT EXISTS \`$DB_NAME\`;
 CREATE USER IF NOT EXISTS '$DB_USER'@'127.0.0.1' IDENTIFIED BY '$DB_PASS';
+CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
 GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
 FLUSH PRIVILEGES;
 SQL
 
@@ -63,6 +67,10 @@ chmod 640 "$PANEL_DIR/.env"
 cd "$PANEL_DIR"
 log "Installing composer deps (takes a few minutes)..."
 COMPOSER_ALLOW_SUPERUSER=1 sudo -u www-data composer install --no-dev --optimize-autoloader -q
+
+# tinker/psysh needs a writable home config dir for the web user.
+mkdir -p /var/www/.config
+chown www-data:www-data /var/www/.config
 
 log "App key + storage link + migrate..."
 sudo -u www-data php artisan key:generate --force -q

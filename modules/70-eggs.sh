@@ -7,7 +7,7 @@ NEST_ID="$(cd "$PANEL_DIR" && sudo -u www-data php artisan tinker --execute='ech
 log "Minecraft nest id: $NEST_ID"
 
 log "Fetching pelican Modrinth egg definition..."
-curl -fsSL -o "$TMPDIR_WORK/modrinth.json" \
+curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --max-time 120 -o "$TMPDIR_WORK/modrinth.json" \
   "https://raw.githubusercontent.com/pelican-eggs/minecraft/main/java/modrinth/egg-pterodactyl-modrinth-generic.json"
 fetch "files/egg-modrinth-install.sh" "$TMPDIR_WORK/egg-modrinth-install.sh"
 
@@ -86,7 +86,22 @@ PHP_EOF
 sed -i -e "s|__WORKDIR__|$TMPDIR_WORK|g" -e "s|__NEST_ID__|$NEST_ID|" "$TMPDIR_WORK/makeegg.php"
 
 cd "$PANEL_DIR"
-sudo -u www-data php artisan tinker --execute="$(cat "$TMPDIR_WORK/makeegg.php")" > "$TMPDIR_WORK/egg.out" 2>&1
-tail -3 "$TMPDIR_WORK/egg.out" | tee -a "$LOG"
-grep -q "^EGG_VARS_DONE=1" "$TMPDIR_WORK/egg.out" || die "Egg import failed."
+echo "Running egg-import tinker..." | tee -a "$LOG"
+# NOTE: tinker occasionally exits non-zero with no output on loaded
+# machines, so retry a few times before giving up.
+TRIES=0
+TINKER_RC=1
+while [ "$TRIES" -lt 3 ]; do
+  TRIES=$((TRIES + 1))
+  if sudo -u www-data php artisan tinker --execute="$(cat "$TMPDIR_WORK/makeegg.php")" > "$TMPDIR_WORK/egg.out" 2>&1; then
+    TINKER_RC=0
+    break
+  fi
+  warn "egg-import tinker attempt $TRIES failed, retrying..."
+  sleep 5
+done
+echo "tinker exit: $TINKER_RC (after $TRIES attempt(s))" | tee -a "$LOG"
+echo "--- egg import output ---" | tee -a "$LOG"
+tail -8 "$TMPDIR_WORK/egg.out" | tee -a "$LOG"
+grep -q "^EGG_VARS_DONE=1" "$TMPDIR_WORK/egg.out" || die "Egg import failed (see $TMPDIR_WORK/egg.out)."
 log "Modrinth Generic egg imported."

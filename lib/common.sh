@@ -11,8 +11,17 @@ if [ -n "${TMPDIR_WORK:-}" ] && [ -f "$TMPDIR_WORK/answers.env" ]; then
 fi
 
 log()  { echo "* $1" | tee -a "$LOG"; }
-warn() { echo "! WARNING: $1" | tee -a "$LOG"; }
+warn() { echo "! WARNING: $1" | tee -a "$LOG" >&2; }
 die()  { echo "ERROR: $1" | tee -a "$LOG" >&2; exit 1; }
+
+fetch() { # fetch <repo-path> <local-path> - works with https:// or file:// REPO_RAW
+  # NOTE: -f is silent on HTTP errors, so log the URL first (a failed fetch
+  # under `set -e` would otherwise kill the run with no explanation).
+  log "Downloading $REPO_RAW/$1 ..."
+  curl -fsSL --retry 3 --retry-delay 5 --retry-all-errors --max-time 180 \
+    "$REPO_RAW/$1" -o "$2" \
+    || die "Download failed after retries: $REPO_RAW/$1"
+}
 
 gen_pass() { # gen_pass <length>
   tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$1"; echo
