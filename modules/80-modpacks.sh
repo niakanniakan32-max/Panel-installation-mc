@@ -87,11 +87,11 @@ if ! sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps \
     --registry="$NPM_REGISTRY" --fetch-timeout=60000 --fetch-retries=2 2>&1 | tail -2 | tee -a "$LOG"; then
   die "npm install failed even before downloading (see above)."
 fi
-if [ ! -d "$PANEL_DIR/node_modules" ] || [ -z "$(ls -A "$PANEL_DIR/node_modules" 2>/dev/null)" ]; then
-  warn "npm install produced an empty node_modules (likely a stalled registry). Retrying via mirror..."
+if [ ! -f "$PANEL_DIR/node_modules/.package-lock.json" ]; then
+  warn "npm install did not complete (likely a stalled registry). Retrying via mirror..."
   sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps \
     --registry="https://registry.npmmirror.com" --fetch-timeout=60000 --fetch-retries=2 2>&1 | tail -2 | tee -a "$LOG"
-  [ -n "$(ls -A "$PANEL_DIR/node_modules" 2>/dev/null)" ] \
+  [ -f "$PANEL_DIR/node_modules/.package-lock.json" ] \
     || die "npm install failed on both registries. Check network/DNS, then re-run."
   log "Mirror registry worked."
 fi
