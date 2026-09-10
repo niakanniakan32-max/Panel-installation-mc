@@ -119,6 +119,14 @@ remote: '$REMOTE'
 YAML
 chmod 600 /etc/pterodactyl/config.yml
 
+# Single-box fix: wings must reach the panel via loopback, not via the public
+# IP (many VPS networks block hairpin NAT, causing timeouts). This only
+# affects local resolution on this machine.
+if ! grep -qE "[[:space:]]$DOMAIN([[:space:]]|$)" /etc/hosts; then
+  log "Adding $DOMAIN to /etc/hosts for loopback (avoids hairpin NAT)..."
+  echo "127.0.0.1 $DOMAIN" >> /etc/hosts
+fi
+
 log "Starting wings..."
 systemctl start wings
 log "Waiting for wings to become active (up to 90s)..."
