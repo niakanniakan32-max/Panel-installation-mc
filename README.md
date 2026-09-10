@@ -34,7 +34,10 @@ bash install.sh --non-interactive
 
 All supported env vars: `DOMAIN EMAIL ADMIN_USER ADMIN_PASS TIMEZONE
 HTTP_PORT HTTPS_PORT WINGS_PORT SFTP_PORT NODE_NAME NODE_MEM NODE_DISK
-NODE_CPU PORT_START PORT_COUNT JEXPANEL_VERSION REPO_RAW`.
+NODE_CPU PORT_START PORT_COUNT JEXPANEL_VERSION REPO_RAW NPM_REGISTRY`.
+If the official npm registry is slow from your country, pre-set e.g.
+`NPM_REGISTRY=https://registry.npmmirror.com` (the installer also retries
+with this mirror automatically if the first attempt yields nothing).
 `--dry-run` prints the plan without changing anything.
 
 ## What it installs

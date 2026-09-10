@@ -80,7 +80,21 @@ cd "$PANEL_DIR"
 # npm (as www-data) needs a writable cache dir.
 mkdir -p /var/www/.npm
 chown www-data:www-data /var/www/.npm
-sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps 2>&1 | tail -2 | tee -a "$LOG"
+# The official npm registry is very slow/blocked from some regions (notably
+# Iran). Try it first, then automatically fall back to a fast mirror.
+NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org}"
+if ! sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps \
+    --registry="$NPM_REGISTRY" --fetch-timeout=60000 --fetch-retries=2 2>&1 | tail -2 | tee -a "$LOG"; then
+  die "npm install failed even before downloading (see above)."
+fi
+if [ ! -d "$PANEL_DIR/node_modules" ] || [ -z "$(ls -A "$PANEL_DIR/node_modules" 2>/dev/null)" ]; then
+  warn "npm install produced an empty node_modules (likely a stalled registry). Retrying via mirror..."
+  sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps \
+    --registry="https://registry.npmmirror.com" --fetch-timeout=60000 --fetch-retries=2 2>&1 | tail -2 | tee -a "$LOG"
+  [ -n "$(ls -A "$PANEL_DIR/node_modules" 2>/dev/null)" ] \
+    || die "npm install failed on both registries. Check network/DNS, then re-run."
+  log "Mirror registry worked."
+fi
 sudo -u www-data npm run build 2>&1 | tail -3 | tee -a "$LOG"
 chown -R www-data:www-data "$PANEL_DIR/public/build" "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 
