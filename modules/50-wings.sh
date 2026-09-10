@@ -7,7 +7,6 @@ if [ -f /usr/local/bin/wings ]; then
   log "Wings binary already present."
 else
   log "Downloading Wings (latest)..."
-  mkdir -p /etc/pterodactyl /var/run/wings
   ARCH="$(dpkg --print-architecture)"
   case "$ARCH" in
     amd64) WINGS_ARCH="amd64" ;;
@@ -20,6 +19,7 @@ else
 fi
 
 log "Installing wings systemd service..."
+mkdir -p /etc/pterodactyl /var/run/wings
 cat > /etc/systemd/system/wings.service <<'UNIT'
 [Unit]
 Description=Pterodactyl Wings Daemon

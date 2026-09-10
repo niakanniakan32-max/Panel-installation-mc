@@ -92,6 +92,7 @@ grep -q "^NODE_UUID=" "$TMPDIR_WORK/node.out" || die "Node creation failed (see 
 source <(grep -E "^(NODE_|ALLOCATIONS=)" "$TMPDIR_WORK/node.out")
 
 log "Writing wings config..."
+mkdir -p /etc/pterodactyl
 CERT_BLOCK="enabled: false"
 if [ "$HAVE_SSL" = "1" ]; then
   CERT_BLOCK="enabled: true
