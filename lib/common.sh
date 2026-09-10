@@ -101,6 +101,17 @@ port_owner() { # port_owner <port> -> "process" or empty
     | sed -n 's/.*users:(("\([^",]*\)".*/\1/p'
 }
 
+detect_pubip() { # prints public IP or nothing; tries several services
+  local url ip
+  for url in https://api.ipify.org https://icanhazip.com https://checkip.amazonaws.com https://ifconfig.me; do
+    ip="$(curl -fsSL --max-time 8 "$url" 2>/dev/null | tr -d ' \r\n' || true)"
+    case "$ip" in
+      *.*.*.*|*:*:*) echo "$ip"; return 0 ;;
+    esac
+  done
+  return 1
+}
+
 # show_port_table: live scan shown BEFORE the user picks ports.
 show_port_table() {
   echo ""

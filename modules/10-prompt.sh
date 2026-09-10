@@ -40,9 +40,9 @@ ask NODE_MEM "Node RAM in MB" "$DEF_MEM"
 ask NODE_DISK "Node disk in MB" "20480"
 ask NODE_CPU "Node CPU in % (100 = 1 core)" "200"
 if [ -z "${PUBIP:-}" ]; then
-  PUBIP="$(curl -fsSL --max-time 10 ifconfig.me || echo '')"
+  PUBIP="$(detect_pubip || true)"
 fi
-[ -n "$PUBIP" ] || die "Could not detect public IP. Re-run with PUBIP=1.2.3.4 in the environment."
+[ -n "$PUBIP" ] || die "Could not detect public IP (tried ipify/icanhazip/amazon/ifconfig.me). Re-run with PUBIP=1.2.3.4 in the environment."
 log "Detected public IP: $PUBIP"
 export PUBIP
 ask PORT_START "First game port" "25590"
