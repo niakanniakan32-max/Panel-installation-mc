@@ -85,7 +85,7 @@ chown www-data:www-data /var/www/.npm
 NPM_REGISTRY="${NPM_REGISTRY:-https://registry.npmjs.org}"
 if ! sudo -u www-data npm install --no-audit --no-fund --legacy-peer-deps \
     --registry="$NPM_REGISTRY" --fetch-timeout=60000 --fetch-retries=2 2>&1 | tail -2 | tee -a "$LOG"; then
-  die "npm install failed even before downloading (see above)."
+  warn "First npm attempt failed - trying the mirror registry."
 fi
 if [ ! -f "$PANEL_DIR/node_modules/.package-lock.json" ]; then
   warn "npm install did not complete (likely a stalled registry). Retrying via mirror..."
