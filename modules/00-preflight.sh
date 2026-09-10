@@ -19,10 +19,10 @@ if [ "$MEM" -lt 3500 ]; then
   warn "Only ${MEM} MB RAM detected. Big modpacks (RLCraft etc.) want 3 GB+ for a single server. Continue only for small servers."
 fi
 if [ -d "$PANEL_DIR" ]; then
-  die "$PANEL_DIR already exists. Remove it or use another machine (fresh VPS required)."
+  die "$PANEL_DIR already exists (previous attempt?). For a retry, clean up first: rm -rf $PANEL_DIR /tmp/tmp.* and drop the jexpanel database/user in MariaDB - or use a fresh VPS."
 fi
 if [ -f /etc/pterodactyl/config.yml ] || systemctl is-active wings >/dev/null 2>&1; then
-  die "An existing wings install was detected (/etc/pterodactyl/config.yml or running wings service). This installer needs a fresh VPS - uninstall wings first."
+  die "An existing wings install was detected (/etc/pterodactyl/config.yml or running wings service). For a retry: systemctl stop wings; rm -rf /etc/pterodactyl - or use a fresh VPS."
 fi
 command -v curl >/dev/null || { apt-get update -y && apt-get install -y curl ca-certificates; }
 log "Preflight OK."
