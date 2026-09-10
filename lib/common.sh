@@ -103,13 +103,24 @@ port_owner() { # port_owner <port> -> "process" or empty
 
 detect_pubip() { # prints public IP or nothing; tries several services
   local url ip
-  for url in https://api.ipify.org https://icanhazip.com https://checkip.amazonaws.com https://ifconfig.me; do
-    ip="$(curl -fsSL --max-time 8 "$url" 2>/dev/null | tr -d ' \r\n' || true)"
+  for url in https://api.ipify.org https://www.cloudflare.com/cdn-cgi/trace https://icanhazip.com https://checkip.amazonaws.com https://ifconfig.me; do
+    if [ "$url" = "https://www.cloudflare.com/cdn-cgi/trace" ]; then
+      ip="$(curl -fsSL --max-time 8 "$url" 2>/dev/null | sed -n 's/^ip=//p' | tr -d ' \r\n' || true)"
+    else
+      ip="$(curl -fsSL --max-time 8 "$url" 2>/dev/null | tr -d ' \r\n' || true)"
+    fi
     case "$ip" in
       *.*.*.*|*:*:*) echo "$ip"; return 0 ;;
     esac
   done
   return 1
+}
+
+valid_ip() { # valid_ip <value> -> 0 if looks like IPv4/IPv6
+  case "$1" in
+    *.*.*.*|*:*:*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # show_port_table: live scan shown BEFORE the user picks ports.

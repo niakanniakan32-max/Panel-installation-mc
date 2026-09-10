@@ -39,11 +39,41 @@ DEF_MEM=$(( $(total_mem_mb) * 90 / 100 ))
 ask NODE_MEM "Node RAM in MB" "$DEF_MEM"
 ask NODE_DISK "Node disk in MB" "20480"
 ask NODE_CPU "Node CPU in % (100 = 1 core)" "200"
-if [ -z "${PUBIP:-}" ]; then
-  PUBIP="$(detect_pubip || true)"
-fi
-[ -n "$PUBIP" ] || die "Could not detect public IP (tried ipify/icanhazip/amazon/ifconfig.me). Re-run with PUBIP=1.2.3.4 in the environment."
-log "Detected public IP: $PUBIP"
+# Public IP: detect, show it, confirm it; fall back to manual entry.
+# (Auto-detection can be wrong behind NAT/proxies, and IP services can fail.)
+MANUAL_IP=0
+while true; do
+  if [ "$MANUAL_IP" = "0" ] && [ -z "${PUBIP:-}" ]; then
+    PUBIP="$(detect_pubip || true)"
+    if [ -z "$PUBIP" ]; then
+      warn "All IP detection services failed (ipify, cloudflare, icanhazip, amazon, ifconfig.me)."
+    fi
+  fi
+  if [ -n "${PUBIP:-}" ] && valid_ip "$PUBIP"; then
+    if [ "${NON_INTERACTIVE:-0}" = "1" ]; then
+      log "Using public IP: $PUBIP"
+      break
+    fi
+    echo "* Detected public IP: $PUBIP"
+    printf "* Is this correct? [Y/n]: "
+    read -r ip_ok || true
+    case "$ip_ok" in
+      [nN]*) PUBIP=""; MANUAL_IP=1; continue ;;
+      *) log "Using public IP: $PUBIP"; break ;;
+    esac
+  fi
+  if [ "${NON_INTERACTIVE:-0}" = "1" ]; then
+    die "No usable public IP. Re-run with PUBIP=1.2.3.4 in the environment."
+  fi
+  printf "* Enter the server's public IP manually: "
+  read -r PUBIP || true
+  if valid_ip "$PUBIP"; then
+    log "Using public IP: $PUBIP"
+    break
+  fi
+  echo "  '$PUBIP' doesn't look like an IP. Try again."
+  PUBIP=""
+done
 export PUBIP
 ask PORT_START "First game port" "25590"
 ask PORT_COUNT "How many game ports (25590, 25591, ...)" "10"
